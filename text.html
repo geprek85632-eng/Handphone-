@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xiaomi HyperOS Simulator with AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .phone-frame {
+            width: 320px;
+            height: 650px;
+            background: #000;
+            border-radius: 40px;
+            border: 8px solid #333;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .notch {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 20px;
+            background: #000;
+            border-radius: 20px;
+            z-index: 100;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .status-bar {
+            height: 35px;
+            padding: 8px 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-size: 12px;
+            z-index: 80;
+            position: relative;
+        }
+
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 20px;
+            margin-top: 50px;
+        }
+
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .app-icon:active {
+            transform: scale(0.9);
+        }
+
+        .icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        .app-name {
+            color: white;
+            font-size: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+
+        .dock {
+            position: absolute;
+            bottom: 25px;
+            left: 10px;
+            right: 10px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0 10px;
+        }
+
+        .control-center {
+            position: absolute;
+            top: -100%;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(25px);
+            z-index: 300;
+            transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+            padding: 50px 20px;
+            color: white;
+        }
+
+        .control-center.active {
+            top: 0;
+        }
+
+        /* Lock Screen Styles */
+        .lock-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 80px 0 40px;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: grab;
+        }
+
+        .lock-screen:active {
+            cursor: grabbing;
+        }
+
+        .lock-screen.unlocked {
+            transform: translateY(-100%);
+            pointer-events: none;
+        }
+
+        .nav-bar-handle {
+            width: 100px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+
+        /* AI App Styles */
+        #aiChatContainer {
+            height: calc(100% - 120px);
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .user-message {
+            background: #007aff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-message {
+            background: #f0f0f2;
+            color: #1a1a1a;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .loader {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #a855f7;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 2px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-frame" id="phoneBody">
+        <div class="notch"></div>
+
+        <!-- Lock Screen dengan Deteksi Gesture -->
+        <div class="lock-screen" id="lockScreen" 
+             style="background-image: url('https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=320&h=650&auto=format&fit=crop');">
+            <div class="text-center text-white pointer-events-none">
+                <h1 class="text-6xl font-light tracking-tight" id="lockTime">12:00</h1>
+                <p class="text-lg opacity-80" id="lockDate">Senin, 22 Maret</p>
+            </div>
+            
+            <div class="flex flex-col items-center gap-4 w-full">
+                <div class="text-white animate-bounce text-sm opacity-70 flex flex-col items-center">
+                    <i class="fas fa-chevron-up mb-2"></i>
+                    <span>Usap ke atas</span>
+                </div>
+                <div class="nav-bar-handle" id="unlockHandle"></div>
+            </div>
+        </div>
+
+        <!-- Control Center -->
+        <div class="control-center" id="controlCenter">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Pusat Kontrol</h2>
+                <i class="fas fa-times cursor-pointer p-2" onclick="toggleControlCenter()"></i>
+            </div>
+            <div class="grid grid-cols-4 gap-4">
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-wifi"></i></div>
+                    <span class="text-[10px] font-medium">Wi-Fi</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-bluetooth"></i></div>
+                    <span class="text-[10px] font-medium">Bluetooth</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:bg-purple-500 transition" onclick="generateSmartWallpaper()">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <span class="text-[10px] font-medium">AI Wall</span>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center shadow-lg"><i class="fas fa-flashlight"></i></div>
+                    <span class="text-[10px] font-medium">Senter</span>
+                </div>
+            </div>
+            
+            <div class="mt-8 px-2">
+                <div class="flex justify-between text-[10px] mb-2 opacity-60">
+                    <span>KECERAHAN</span>
+                    <i class="fas fa-sun"></i>
+                </div>
+                <input type="range" class="w-full h-10 accent-white bg-white/20 rounded-lg appearance-none cursor-pointer" value="80">
+            </div>
+
+            <div class="mt-8 p-4 bg-white/10 rounded-2xl border border-white/5">
+                <p class="text-sm font-semibold mb-3">Asisten Mi AI ✨</p>
+                <button onclick="openApp('Mi AI ✨'); toggleControlCenter();" class="w-full bg-gradient-to-r from-purple-600 to-blue-500 py-3 rounded-xl text-xs font-bold hover:opacity-90 transition shadow-lg">
+                    MULAI PERCAKAPAN
+                </button>
+            </div>
+        </div>
+
+        <!-- Home Screen -->
+        <div class="screen" id="homeScreen" style="background-image: url('https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=320&h=650&auto=format&fit=crop');">
+            <!-- Status Bar Transparan -->
+            <div class="status-bar" onclick="toggleControlCenter()">
+                <div id="statusTime" class="font-semibold">12:00</div>
+                <div class="flex gap-2 items-center opacity-90">
+                    <i class="fas fa-signal"></i>
+                    <i class="fas fa-wifi"></i>
+                    <div class="flex items-center gap-1 border border-white/40 rounded-sm px-1 py-0.5 text-[8px]">
+                        100% <i class="fas fa-battery-full text-[10px]"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Widget Jam HyperOS Style -->
+            <div class="mt-12 text-center text-white drop-shadow-lg">
+                <div class="text-6xl font-light mb-1 tracking-tighter" id="homeTime">12:00</div>
+                <div class="text-sm font-medium opacity-80" id="homeDate">Senin, 22 Maret</div>
+            </div>
+
+            <!-- App Grid -->
+            <div class="app-grid">
+                <div class="app-icon" onclick="openApp('Telepon')">
+                    <div class="icon-box bg-green-500"><i class="fas fa-phone"></i></div>
+                    <span class="app-name">Telepon</span>
+                </div>
+                <div class="app-icon" onclick="openApp('Mi AI ✨')">
+                    <div class="icon-box bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500"><i class="fas fa-robot"></i></div>
+                    <span class="app-name">Mi AI ✨</span>
+                </div>
+                <div class="app-icon" onclick="openApp('Browser')">
+                    <div class="icon-box bg-white text-blue-600"><i class="fab fa-chrome"></i></div>
+                    <span class="app-name">Browser</span>
+                </div>
+                <div class="app-icon" onclick="openApp('Kamera')">
+                    <div class="icon-box bg-zinc-800"><i class="fas fa-camera"></i></div>
+                    <span class="app-name">Kamera</span>
+                </div>
+                <div class="app-icon" onclick="openApp('Galeri')">
+                    <div class="icon-box bg-orange-400"><i class="fas fa-images"></i></div>
+                    <span class="app-name">Galeri</span>
+                </div>
+                <div class="app-icon" onclick="openApp('Setelan')">
+                    <div class="icon-box bg-zinc-500"><i class="fas fa-cog"></i></div>
+                    <span class="app-name">Setelan</span>
+                </div>
+                <div class="app-icon" onclick="generateSmartWallpaper()">
+                    <div class="icon-box bg-indigo-600"><i class="fas fa-wand-magic-sparkles"></i></div>
+                    <span class="app-name">AI Wall ✨</span>
+                </div>
+                <div class="app-icon" onclick="changeWallpaper()">
+                    <div class="icon-box bg-purple-500"><i class="fas fa-paint-roller"></i></div>
+                    <span class="app-name">Tema</span>
+                </div>
+            </div>
+
+            <!-- Dock -->
+            <div class="dock shadow-2xl">
+                <div class="app-icon" onclick="openApp('Telepon')">
+                    <div class="icon-box bg-green-500"><i class="fas fa-phone text-xl"></i></div>
+                </div>
+                <div class="app-icon" onclick="openApp('Pesan')">
+                    <div class="icon-box bg-blue-400"><i class="fas fa-comment text-xl"></i></div>
+                </div>
+                <div class="app-icon" onclick="openApp('Kontak')">
+                    <div class="icon-box bg-orange-400"><i class="fas fa-user text-xl"></i></div>
+                </div>
+                <div class="app-icon" onclick="openApp('Mi AI ✨')">
+                    <div class="icon-box bg-gradient-to-br from-purple-600 to-blue-500 shadow-inner"><i class="fas fa-robot text-xl"></i></div>
+                </div>
+            </div>
+
+            <!-- Garis Navigasi Bawah (Lock Phone) -->
+            <div class="home-indicator" onclick="lockPhone()"></div>
+        </div>
+
+        <!-- App Modal Simulation -->
+        <div id="appModal" class="absolute inset-0 bg-white z-[600] hidden flex-col transition-all duration-300 transform scale-95 opacity-0">
+            <div class="p-6 pt-12 flex items-center justify-between border-b bg-white">
+                <h3 id="appTitle" class="text-lg font-bold">App</h3>
+                <button onclick="closeApp()" class="text-zinc-400 hover:text-zinc-900 transition"><i class="fas fa-times text-2xl"></i></button>
+            </div>
+            
+            <div id="standardAppContent" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
+                <div id="appIconLarge" class="text-7xl mb-6"></div>
+                <h4 class="text-xl font-semibold mb-2" id="appDetailName">Nama Aplikasi</h4>
+                <p id="appContent" class="text-gray-400 text-sm max-w-[200px]">Fitur ini akan tersedia pada pembaruan MIUI mendatang.</p>
+            </div>
+
+            <!-- Special AI App Interface -->
+            <div id="aiAppInterface" class="hidden flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
+                <div id="aiChatContainer">
+                    <div class="message ai-message">Halo! Saya Mi AI. Ada yang bisa saya bantu hari ini? ✨</div>
+                </div>
+                <div class="p-4 bg-white border-t flex gap-3 items-center">
+                    <input type="text" id="aiInput" placeholder="Ketik pesan..." class="flex-1 bg-gray-100 border-none rounded-2xl px-5 py-3 text-sm outline-none focus:ring-2 focus:ring-purple-400 transition">
+                    <button onclick="sendToAI()" id="aiSendBtn" class="bg-purple-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg hover:bg-purple-700 active:scale-95 transition">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pb-4 pt-2 flex justify-center bg-white" onclick="closeApp()">
+                <div class="w-32 h-1 bg-gray-200 rounded-full cursor-pointer hover:bg-gray-300 transition"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Loading Screen -->
+    <div id="aiLoading" class="absolute inset-0 bg-black/60 z-[1000] hidden flex flex-col items-center justify-center text-white text-center p-10 backdrop-blur-md">
+        <div class="loader mb-6 scale-150"></div>
+        <p id="loadingText" class="font-medium tracking-wide">Menghubungi Mi Server AI...</p>
+    </div>
+
+    <!-- Toast UI -->
+    <div id="toast" class="fixed top-12 left-1/2 -translate-x-1/2 -translate-y-20 transition-all duration-500 bg-white/95 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl z-[1500] text-xs font-bold border border-black/5 flex items-center gap-3">
+        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <span id="toastMsg">Halo Xiaomi User!</span>
+    </div>
+
+    <script>
+        const apiKey = ""; 
+
+        // Update Waktu & Tanggal
+        function updateDateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            
+            const timeStr = `${hours}:${minutes}`;
+            const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+            
+            document.querySelectorAll('#lockTime, #homeTime, #statusTime').forEach(el => el.textContent = timeStr);
+            document.querySelectorAll('#lockDate, #homeDate').forEach(el => el.textContent = dateStr);
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+        // --- Perbaikan Lock Screen (Gesture Support) ---
+        const lockScreen = document.getElementById('lockScreen');
+        let startY = 0;
+
+        // Mouse Events
+        lockScreen.addEventListener('mousedown', (e) => startY = e.clientY);
+        lockScreen.addEventListener('mouseup', (e) => {
+            if (startY - e.clientY > 50) unlockPhone();
+        });
+
+        // Touch Events
+        lockScreen.addEventListener('touchstart', (e) => startY = e.touches[0].clientY, {passive: true});
+        lockScreen.addEventListener('touchend', (e) => {
+            let endY = e.changedTouches[0].clientY;
+            if (startY - endY > 50) unlockPhone();
+        }, {passive: true});
+
+        // Klik handle juga tetap bisa
+        document.getElementById('unlockHandle').addEventListener('click', unlockPhone);
+
+        function unlockPhone() {
+            lockScreen.classList.add('unlocked');
+            showToast("✨ Terkunci terbuka");
+        }
+
+        function lockPhone() {
+            lockScreen.classList.remove('unlocked');
+            showToast("🔒 Ponsel terkunci");
+        }
+
+        function toggleControlCenter() {
+            document.getElementById('controlCenter').classList.toggle('active');
+        }
+
+        // App Management
+        function openApp(name) {
+            const modal = document.getElementById('appModal');
+            const title = document.getElementById('appTitle');
+            const detailName = document.getElementById('appDetailName');
+            const standardUI = document.getElementById('standardAppContent');
+            const aiUI = document.getElementById('aiAppInterface');
+            
+            title.innerText = name;
+            detailName.innerText = name;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('scale-100', 'opacity-100');
+            }, 10);
+            
+            if
